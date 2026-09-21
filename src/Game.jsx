@@ -598,7 +598,7 @@ export default function Game() {
               droit de faire. Un jeu proposé par{" "}
               <a
                 className="lead-link"
-                href="https://www.veloversailles.velovgp.org/"
+                href="https://www.velovgp.org/"
                 target="_blank"
                 rel="noopener noreferrer"
               >
