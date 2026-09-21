@@ -1,16 +1,31 @@
 // Google Apps Script for the cyclo-code-versailles leaderboard.
-// Bind this to a Google Sheet that has a tab named "scores_code" with a header row:
-//   A: timestamp   B: name   C: score
 //
-// Deploy: Deploy > New deployment > type "Web app",
-//   - Execute as: Me
-//   - Who has access: Anyone
-// Copy the resulting /exec URL into the app's VITE_LEADERBOARD_URL.
+// This is a STANDALONE script, not a bound one. The sibling game
+// (cyclo-guess-versailles) already owns the bound script of its spreadsheet,
+// and a spreadsheet can only have one. So this one opens the spreadsheet by id
+// instead, which also means the "scores_code" tab can live either in that same
+// spreadsheet or in one of its own.
+//
+// Setup:
+//   1. The target tab is "scores_code", with this header row:
+//        A: timestamp   B: name   C: score
+//   2. Create the script at script.google.com > New project, paste this file.
+//   3. Fill SPREADSHEET_ID below. It is the long id in the sheet's URL:
+//        https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit
+//   4. Deploy > New deployment > type "Web app",
+//        - Execute as: Me            (so it reaches the sheet with your rights)
+//        - Who has access: Anyone
+//   5. Copy the resulting /exec URL into VITE_LEADERBOARD_URL, both in
+//      .env.local and in the repo's Actions secrets.
+//
+// Do NOT point this at the "scores" tab: that one belongs to the sibling game
+// and the two classements must stay separate.
 
+const SPREADSHEET_ID = "PASTE_THE_SPREADSHEET_ID_HERE";
 const SHEET_NAME = "scores_code";
 
 function sheet_() {
-  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  return SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
 }
 
 // Read: returns the top scores. Supports JSONP via ?callback=fn (used by the app).
