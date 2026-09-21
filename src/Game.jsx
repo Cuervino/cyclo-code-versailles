@@ -6,7 +6,6 @@ import {
   submitScore,
   fetchLeaderboard,
 } from "./lib/leaderboard.js";
-import { SENTIMENT } from "./lib/sentiment.js";
 import SPOTS from "./data/spots.json";
 import logoVeloVersailles from "./assets/logo-veloversailles.jpg";
 
@@ -559,11 +558,11 @@ export default function Game() {
             src={logoVeloVersailles}
             alt="VeloVersailles"
           />
-          <h1 className="landing-brand">Cyclo Guessr Versailles</h1>
+          <h1 className="landing-brand">Code Guessr Versailles</h1>
           <p className="landing-lead">
             <span>
-              Un jeu de localisation autour des aménagements cyclables de
-              Versailles.
+              Un jeu de localisation pour apprendre Versailles à vélo, et le
+              code de la route avec.
             </span>
             <span>
               À partir d'une photo figée (façon "NMPZ" pour les habitués de{" "}
@@ -594,7 +593,9 @@ export default function Game() {
               maximum de points, sur 5 manches.
             </span>
             <span>
-              Chaque spot vient avec l'avis de{" "}
+              Chaque lieu vient avec ce qu'il faut savoir pour y circuler : ce
+              qui s'y passe, ce que dit le code de la route, ce que tu as le
+              droit de faire. Un jeu proposé par{" "}
               <a
                 className="lead-link"
                 href="https://www.veloversailles.velovgp.org/"
@@ -740,7 +741,7 @@ export default function Game() {
     return (
       <div className="screen">
         <div className="card">
-          <h1>Cyclo Guessr Versailles</h1>
+          <h1>Code Guessr Versailles</h1>
           <p>Chargement…</p>
         </div>
       </div>
@@ -750,7 +751,6 @@ export default function Game() {
   const total = results.reduce((s, r) => s + r.score, 0);
   const lastResult = results[round];
   const spot = roundSpots[round];
-  const tone = spot ? SENTIMENT[spot.sentiment] : null;
 
   // End-screen derived values.
   const maxTotal = roundSpots.length * 5000;
@@ -868,11 +868,8 @@ export default function Game() {
                   <span>à {formatDistance(lastResult.distance)} du lieu</span>
                 </div>
                 {spot.description ? (
-                  <div className={`vv-callout${tone ? ` vv-toned ${tone.cls}` : ""}`}>
-                    <div className="vv-label">
-                      {tone && <span className="vv-face">{tone.emoji}</span>}
-                      Avis VeloVersailles{tone ? ` · ${tone.label}` : ""}
-                    </div>
+                  <div className="vv-callout">
+                    <div className="vv-label">Ce qu'il faut savoir</div>
                     <p>{spot.description}</p>
                   </div>
                 ) : (

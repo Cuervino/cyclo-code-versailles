@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadGoogleMaps } from "./lib/googleMaps.js";
 import { loadSpots, saveSpots, downloadSpots } from "./lib/storage.js";
-import { SENTIMENT, SENTIMENT_LEVELS } from "./lib/sentiment.js";
 import DevNav from "./DevNav.jsx";
 import SPOTS from "./data/spots.json";
 
@@ -12,7 +11,7 @@ const WMAX = 820;
 const WDEF = 460;
 
 // Build the working set: the committed spots.json is the source of truth (it
-// carries every spot and its sentiment); we also keep any locally-curated spot
+// carries every spot and its text); we also keep any locally-curated spot
 // whose id isn't in the file yet, so uncommitted curations aren't lost.
 function seedWorking() {
   const byId = new Map(SPOTS.map((s) => [s.id, { ...s }]));
@@ -33,7 +32,7 @@ const PANO_OPTIONS = {
   zoomControl: true,
 };
 
-const hasAvis = (s) =>
+const hasText = (s) =>
   typeof s.description === "string" && s.description.trim() !== "";
 
 export default function AvisEditor() {
@@ -167,15 +166,15 @@ export default function AvisEditor() {
   }
 
   const counts = useMemo(() => {
-    const withAvis = spots.filter(hasAvis).length;
-    return { total: spots.length, withAvis, without: spots.length - withAvis };
+    const withText = spots.filter(hasText).length;
+    return { total: spots.length, withText, without: spots.length - withText };
   }, [spots]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return spots.filter((s) => {
-      if (filter === "with" && !hasAvis(s)) return false;
-      if (filter === "without" && hasAvis(s)) return false;
+      if (filter === "with" && !hasText(s)) return false;
+      if (filter === "without" && hasText(s)) return false;
       if (q && !(s.description || "").toLowerCase().includes(q)) return false;
       return true;
     });
@@ -213,7 +212,7 @@ export default function AvisEditor() {
     return (
       <div className="screen">
         <div className="card">
-          <h1>Avis VeloVersailles</h1>
+          <h1>Ce qu'il faut savoir</h1>
           <p>Chargement…</p>
         </div>
       </div>
@@ -223,10 +222,10 @@ export default function AvisEditor() {
   return (
     <div className="app">
       <header className="topbar">
-        <strong>Avis VeloVersailles — édition</strong>
+        <strong>Ce qu'il faut savoir : édition</strong>
         <span className="counts">
-          {counts.total} spots · {counts.withAvis} avec avis ·{" "}
-          {counts.without} sans
+          {counts.total} spots · {counts.withText} rédigés ·{" "}
+          {counts.without} à faire
         </span>
         <span className="actions">
           <DevNav current="avis" />
@@ -246,13 +245,13 @@ export default function AvisEditor() {
               className="avis-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher dans les avis…"
+              placeholder="Rechercher dans les textes…"
             />
             <div className="avis-segmented">
               {[
                 ["all", `Tous (${counts.total})`],
-                ["with", `Avec avis (${counts.withAvis})`],
-                ["without", `Sans (${counts.without})`],
+                ["with", `Rédigés (${counts.withText})`],
+                ["without", `À faire (${counts.without})`],
               ].map(([key, label]) => (
                 <button
                   key={key}
@@ -266,29 +265,25 @@ export default function AvisEditor() {
           </div>
 
           <div className="avis-table">
-            {visible.map((s) => {
-              const tone = SENTIMENT[s.sentiment];
-              return (
-                <button
-                  key={s.id}
-                  className={`avis-row${
-                    s.id === selectedId ? " selected" : ""
-                  }`}
-                  onClick={() => setSelectedId(s.id)}
-                >
-                  <span className={`avis-dot${tone ? ` ${tone.cls}` : ""}`}>
-                    {tone ? tone.emoji : "·"}
-                  </span>
-                  <span className="avis-text">
-                    {hasAvis(s) ? (
-                      s.description
-                    ) : (
-                      <em className="muted">(sans avis)</em>
-                    )}
-                  </span>
-                </button>
-              );
-            })}
+            {visible.map((s) => (
+              <button
+                key={s.id}
+                className={`avis-row${s.id === selectedId ? " selected" : ""}`}
+                onClick={() => setSelectedId(s.id)}
+              >
+                {/* Filled dot = a text has been written for this spot. */}
+                <span className={`avis-dot${hasText(s) ? " done" : ""}`}>
+                  {hasText(s) ? "●" : "·"}
+                </span>
+                <span className="avis-text">
+                  {hasText(s) ? (
+                    s.description
+                  ) : (
+                    <em className="muted">(à rédiger)</em>
+                  )}
+                </span>
+              </button>
+            ))}
             {!visible.length && (
               <p className="muted avis-empty">Aucun spot pour ce filtre.</p>
             )}
@@ -309,7 +304,7 @@ export default function AvisEditor() {
           {!selected ? (
             <div className="avis-placeholder muted">
               Sélectionne un spot dans la liste pour voir son Street View, sa
-              position, et éditer son avis.
+              position, et rédiger son texte.
             </div>
           ) : (
             <>
@@ -317,52 +312,16 @@ export default function AvisEditor() {
               <div className="avis-map" ref={mapDivRef} />
 
               <label className="field">
-                Avis VeloVersailles
+                Ce qu'il faut savoir
                 <textarea
                   value={selected.description || ""}
                   onChange={(e) =>
                     updateSpot(selected.id, { description: e.target.value })
                   }
-                  placeholder="Décris l'aménagement : ce qui marche, ce qui coince…"
-                  rows={4}
+                  placeholder="Ce qui se passe ici, ce que dit le code de la route, ce que tu as le droit de faire…"
+                  rows={6}
                 />
               </label>
-
-              <div className="field">
-                Niveau
-                <div className="sent-picker">
-                  {SENTIMENT_LEVELS.map((lvl) => {
-                    const t = SENTIMENT[lvl];
-                    return (
-                      <button
-                        key={lvl}
-                        className={`sent-btn ${t.cls}${
-                          selected.sentiment === lvl ? " on" : ""
-                        }`}
-                        title={t.label}
-                        onClick={() =>
-                          updateSpot(selected.id, { sentiment: lvl })
-                        }
-                      >
-                        <span className="sent-emoji">{t.emoji}</span>
-                        <span className="sent-label">{t.label}</span>
-                      </button>
-                    );
-                  })}
-                  <button
-                    className={`sent-btn sent-none${
-                      selected.sentiment == null ? " on" : ""
-                    }`}
-                    title="Aucun niveau"
-                    onClick={() =>
-                      updateSpot(selected.id, { sentiment: undefined })
-                    }
-                  >
-                    <span className="sent-emoji">∅</span>
-                    <span className="sent-label">Aucun</span>
-                  </button>
-                </div>
-              </div>
 
               <p className="avis-hint muted">
                 Modifs enregistrées en local. Pense à « Exporter spots.json » et

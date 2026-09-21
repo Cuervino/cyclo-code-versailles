@@ -1,5 +1,5 @@
-// Google Apps Script for the cyclo-guess-versailles leaderboard.
-// Bind this to a Google Sheet that has a tab named "scores" with a header row:
+// Google Apps Script for the cyclo-code-versailles leaderboard.
+// Bind this to a Google Sheet that has a tab named "scores_code" with a header row:
 //   A: timestamp   B: name   C: score
 //
 // Deploy: Deploy > New deployment > type "Web app",
@@ -7,7 +7,7 @@
 //   - Who has access: Anyone
 // Copy the resulting /exec URL into the app's VITE_LEADERBOARD_URL.
 
-const SHEET_NAME = "scores";
+const SHEET_NAME = "scores_code";
 
 function sheet_() {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
