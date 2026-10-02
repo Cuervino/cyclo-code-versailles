@@ -693,6 +693,14 @@ button.ghost {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   opacity: 0.8;
   transition: opacity 0.18s ease, background 0.18s ease;
+  touch-action: none; /* let a finger drag the handle instead of scrolling */
+}
+/* Bigger target for fingers. */
+@media (pointer: coarse) {
+  .resize-handle {
+    width: 36px;
+    height: 36px;
+  }
 }
 .guess-corner:hover .resize-handle {
   opacity: 1;

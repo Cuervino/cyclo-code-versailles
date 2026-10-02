@@ -142,6 +142,8 @@ export default function Game() {
   const [results, setResults] = useState([]); // [{distance, score}]
   const [hovered, setHovered] = useState(false);
   const hoverTimer = useRef(null); // hover-intent open/close debounce
+  // Touch screens have no hover: a tap on the handle pins the map open instead.
+  const [pinned, setPinned] = useState(false);
   const [resizing, setResizing] = useState(false);
   const [gameId, setGameId] = useState(0); // bumps each new game to rebuild maps
   const [name, setName] = useState(() => localStorage.getItem("cgv_name") || "");
@@ -397,16 +399,27 @@ export default function Game() {
       .catch(() => setLeaderboard([]));
   }, [status, gameId]);
 
-  // Effective corner-map size: expanded while hovered or resizing, else small.
-  const eff = hovered || resizing ? mapSize : MAP_COLLAPSED;
+  // Effective corner-map size: expanded while hovered, pinned or resizing, else
+  // small. Clamped to the viewport so a size saved on desktop fits a phone.
+  const expanded = hovered || pinned || resizing;
+  const eff = expanded
+    ? {
+        w: Math.max(MAP_COLLAPSED.w, Math.min(mapSize.w, window.innerWidth - 32)),
+        h: Math.max(MAP_COLLAPSED.h, Math.min(mapSize.h, window.innerHeight - 160)),
+      }
+    : MAP_COLLAPSED;
 
   // Hover intent: a small open delay avoids accidental expansion when the cursor
   // just sweeps over, and a longer close delay forgives brief exits / edge wobble.
+  // Ignored on touch screens, where browsers emulate mouseenter on tap.
+  const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   function onCornerEnter() {
+    if (!canHover) return;
     clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => setHovered(true), 80);
   }
   function onCornerLeave() {
+    if (!canHover) return;
     clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => setHovered(false), 250);
   }
@@ -436,6 +449,7 @@ export default function Game() {
     setResults((r) => [...r, { distance, score }]);
     setMinimized(false);
     setHovered(false);
+    setPinned(false);
     setPhase("revealed");
   }
 
@@ -483,6 +497,7 @@ export default function Game() {
   function next() {
     setMinimized(false);
     setHovered(false);
+    setPinned(false);
     if (round + 1 < roundSpots.length) {
       setGuess(null);
       setRound((r) => r + 1);
@@ -493,15 +508,22 @@ export default function Game() {
   }
 
   // Drag the top-left handle to set the expanded (hover) size of the corner map.
+  // On touch, a tap (no real drag) toggles the map open/closed, and a drag
+  // leaves it open, since there is no hover to keep it expanded afterwards.
   function onResizeStart(e) {
     e.preventDefault();
-    setResizing(true);
+    const isTouch = e.pointerType !== "mouse";
     const startX = e.clientX;
     const startY = e.clientY;
-    const startW = mapSize.w;
-    const startH = mapSize.h;
+    const startW = eff.w;
+    const startH = eff.h;
     let last = { w: startW, h: startH };
+    let moved = false;
+    if (!isTouch) setResizing(true);
     const onMove = (ev) => {
+      if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 8) return;
+      moved = true;
+      setResizing(true);
       last = {
         w: Math.max(220, Math.min(900, startW + (startX - ev.clientX))),
         h: Math.max(160, Math.min(700, startH + (startY - ev.clientY))),
@@ -511,11 +533,17 @@ export default function Game() {
     const onUp = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
       setResizing(false);
-      localStorage.setItem("cgv_mapsize_v2", JSON.stringify(last));
+      if (isTouch) {
+        if (moved) setPinned(true);
+        else setPinned((p) => !p);
+      }
+      if (moved) localStorage.setItem("cgv_mapsize_v2", JSON.stringify(last));
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   }
 
   // --- Render states ---------------------------------------------------------
